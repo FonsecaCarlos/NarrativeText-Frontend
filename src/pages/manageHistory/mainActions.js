@@ -1,10 +1,10 @@
 import { toastr } from 'react-redux-toastr'
-
 import api from '../../services/api'
+import consts from '../../consts'
 
 export function setCreated(op) {
     return {
-        type: 'SET_CREATED',
+        type: consts.SET_CREATED,
         payload: op
     }
 }
@@ -14,10 +14,9 @@ export function getPublicHistorys(page = 1, idAuthor) {
         api.get(`/narrativeText/indexPublic?page=${page}&idAuthor=${idAuthor}`)
             .then(data => {
                 dispatch([
-                    {
-                        type: 'PUBLIC_HISTORYS_FETCHED',
-                        payload: data
-                    }, setCreated(false)
+                    { type: consts.PUBLIC_HISTORYS_FETCHED, payload: data },
+                    setCreated(false),
+                    setSearch('')
                 ])
             }).catch(e => {
                 e.response.data.errors.forEach(error => toastr.error('Erro', error))
@@ -30,10 +29,9 @@ export function getMyHistorys(page = 1, idAuthor) {
         api.get(`/narrativeText/index?page=${page}&idAuthor=${idAuthor}`)
             .then(data => {
                 dispatch([
-                    {
-                        type: 'MY_HISTORYS_FETCHED',
-                        payload: data
-                    }, setCreated(false)
+                    { type: consts.MY_HISTORYS_FETCHED, payload: data },
+                    setCreated(false),
+                    setSearch('')
                 ])
             }).catch(e => {
                 e.response.data.errors.forEach(error => toastr.error('Erro', error))
@@ -45,7 +43,7 @@ export function getMyHistorys(page = 1, idAuthor) {
 export function getHistory(idHistory, idAuthor) {
     const request = api.get(`/narrativeText/indexHistory?idHistory=${idHistory}&idAuthor=${idAuthor}`)
     return {
-        type: 'HISTORY_FETCHED',
+        type: consts.HISTORY_FETCHED,
         payload: request
     }
 
@@ -69,15 +67,13 @@ export function putHistory(idAuthor, narrativeText) {
 
 export function postAlternativeText(idHistory, narrativeText) {
     return dispatch => {
+        narrativeText.author = narrativeText.author._id
         api.post(`/narrativeText/addAlternativeText`, { narrativeText, idHistory })
             .then(resp => {
                 toastr.success('Sucesso', 'Operação realizada com sucesso.')
                 const { _id, author } = resp.data
                 getHistory(_id, author).payload.then((resp) => {
-                    dispatch({
-                        type: 'HISTORY_FETCHED',
-                        payload: resp
-                    })
+                    dispatch({ type: consts.HISTORY_FETCHED, payload: resp })
                     dispatch(setCreated(true))
                 })
             }).catch(e => {
@@ -93,10 +89,7 @@ export function postHistory(narrativeText) {
                 toastr.success('Sucesso', 'Operação realizada com sucesso.')
                 const { _id, author } = resp.data
                 getHistory(_id, author).payload.then((resp) => {
-                    dispatch({
-                        type: 'HISTORY_FETCHED',
-                        payload: resp
-                    })
+                    dispatch({ type: consts.HISTORY_FETCHED, payload: resp })
                     dispatch(setCreated(true))
                 })
             }).catch(e => {
@@ -108,14 +101,14 @@ export function postHistory(narrativeText) {
 export function searchHistory(page = 1, idAuthor, title) {
     const request = api.get(`/narrativeText/searchHistory?page=${page}&idAuthor=${idAuthor}&title=${title}`)
     return {
-        type: 'HISTORYS_SEARCHED',
+        type: consts.HISTORYS_SEARCHED,
         payload: request
     }
 }
 
 export function setSearch(title) {
     return {
-        type: 'SEARCH',
+        type: consts.SEARCH,
         payload: title
     }
 }
@@ -125,7 +118,7 @@ export function addLike(idHistory, idAuthor) {
         api.put(`/narrativeText/addLike?idAuthor=${idAuthor}&idHistory=${idHistory}`)
             .then(resp => {
                 dispatch({
-                    type: 'SET_LIKE',
+                    type: consts.SET_LIKE,
                     payload: resp.data
                 })
             }).catch(e => {
@@ -139,7 +132,7 @@ export function removeLike(idHistory, idAuthor) {
         api.put(`/narrativeText/removeLike?idAuthor=${idAuthor}&idHistory=${idHistory}`)
             .then(resp => {
                 dispatch({
-                    type: 'SET_LIKE',
+                    type: consts.SET_LIKE,
                     payload: resp.data
                 })
             }).catch(e => {
@@ -148,11 +141,29 @@ export function removeLike(idHistory, idAuthor) {
     }
 }
 
-export function deleteHistory(idHistory, idAuthor) {
+export function deleteHistory(idHistory, idAuthor, historyMaster) {
     return dispatch => {
         api.delete(`/narrativeText/deleteHistory?idAuthor=${idAuthor}&idHistory=${idHistory}`)
             .then(resp => {
+                if(historyMaster)
+                    getHistory(historyMaster, idAuthor).payload.then((resp) => {
+                        dispatch({ type: consts.HISTORY_FETCHED, payload: resp })
+                    })
+
                 toastr.success('Sucesso', resp.data.success)
+            }).catch(e => {
+                e.response.data.errors.forEach(error => toastr.error('Erro', error))
+            })
+    }
+}
+
+export function getMyAlternativeText(page = 1, idAuthor) {
+    return dispatch => {
+        api.get(`/narrativeText/index?page=${page}&idAuthor=${idAuthor}`)
+            .then(data => {
+                dispatch([
+                    { type: consts.MY_ALTERNATIVE_TEXT_FETCHED, payload: data }
+                ])
             }).catch(e => {
                 e.response.data.errors.forEach(error => toastr.error('Erro', error))
             })

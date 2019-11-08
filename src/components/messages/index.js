@@ -2,7 +2,7 @@ import React from 'react'
 
 import ReduxToastr from 'react-redux-toastr'
 
-import '../../../node_modules/react-redux-toastr/lib/css/react-redux-toastr.min.css'
+import 'react-redux-toastr/lib/css/react-redux-toastr.min.css'
 
 export default props => (
     <ReduxToastr
@@ -10,7 +10,9 @@ export default props => (
         newestOnTop={false}
         preventDuplicates={true}
         position='top-right'
+        getState={(state) => state.toastr}
         transitionIn='fadeIn'
         transitionOut='fadeOut'
-        progressBar />
+        progressBar
+        closeOnToastrClick />
 )

@@ -1,11 +1,11 @@
 import React, { Component } from 'react'
 import { Redirect } from 'react-router-dom'
-
 import { toastr } from 'react-redux-toastr'
+import { actions as toastrActions } from 'react-redux-toastr'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
-import { putHistory, getHistory, setCreated } from '../manageHistory/mainActions'
-
+import { putHistory, getHistory, setCreated, deleteHistory, getMyAlternativeText } from '../manageHistory/mainActions'
+import AlternativeText from '../../components/alternativeText'
 import TemplateHistory from '../../components/templateHistory'
 
 class WriteHistory extends Component {
@@ -17,8 +17,10 @@ class WriteHistory extends Component {
             edit: true,
             back: false,
             addAlternativeText: false,
-            isModifed: false
-         }
+            isModifed: false,
+            home: false
+        }
+        this.props.getMyAlternativeText(1, this.props.auth._id)
     }
 
     componentDidMount() {
@@ -34,8 +36,21 @@ class WriteHistory extends Component {
     }
 
     handleIsPublic = (e) => {
-        const isPublic = !this.state.isPublic
-        this.setState({isPublic, isModifed: true})
+        const { isPublic } = this.state
+        const toastrConfirmOptions = {
+            onOk: () => {
+                this.setState({isPublic: !isPublic, isModifed: true})
+            },
+            onCancel: () => {},
+            okText: isPublic ? 'TORNAR PRIVADA' : 'TORNAR PÚBLICA', 
+            cancelText: 'CANCELAR'
+        }
+        if(!isPublic)
+            toastr.confirm('Deseja tornar história pública? Todos poderão visualizá-la.',
+                toastrConfirmOptions)
+        else
+            toastr.confirm('Deseja tornar história privada? Apenas você poderá visualizá-la.',
+                toastrConfirmOptions)
     }
 
     handleBack = (e) => {
@@ -66,14 +81,71 @@ class WriteHistory extends Component {
         if(isModifed){
             toastr.error('Aviso', 'Salve as alterações')
             return
-        }        
+        }
+        
+        const { auth } = this.props
+        const { history, alternativesTexts } = this.props.narrativeText
+        let count = 1
+        this.props.getMyAlternativeText(count, auth._id)
+        
+        const toastrConfirmOptions = {
+            onOk: () => {
+                const addAlternativeText = !this.state.addAlternativeText
+                this.setState({ addAlternativeText })
+            },
+            onCancel: () => {
+                const toastr2 = bindActionCreators(toastrActions, this.props.dispatch)
+                
+                const toastrConfirmOptionsTwo = {
+                    id: 'idToastr',
+                    okText: 'CANCELAR',
+                    cancelText: 'PRÓXIMO',
+                    disableCancel: count >= alternativesTexts.pageCount ? true : false,
+                    onCancel: () => {
+                        if(count < alternativesTexts.pageCount){
+                            this.props.getMyAlternativeText(++count, auth._id)
+                            toastr.confirm('Escolha um de seus textos:', { ...toastrConfirmOptionsTwo, 
+                                disableCancel: count >= alternativesTexts.pageCount ? true : false})
+                        }
+                    },
+                    component: () => {
+                        return <AlternativeText history={history}
+                            update={() => {
+                                toastr2.hideConfirm()
+                            }} />
+                    }
+                }
+                toastr.confirm('Escolha um de seus textos:', toastrConfirmOptionsTwo)
+            },
+            okText: 'NOVO',
+            cancelText: 'PROCURAR'
+        }
+        toastr.confirm('Deseja criar um novo enredo ou usar um já existente?', toastrConfirmOptions)
+    }
 
-        const addAlternativeText = !this.state.addAlternativeText
-        this.setState({addAlternativeText})
+    deleteHistory = ( idHistory, idAuthor ) => {
+        const { historyMaster } = this.props.narrativeText.history
+    
+        const toastrConfirmOptions = {
+            onOk: () => {
+                this.props.deleteHistory( idHistory, idAuthor, historyMaster )
+                
+                if(historyMaster){
+                    this.setState({back: true})
+                }else{
+                    /* Remover historia apagada da lista */
+                    this.setState({home: true})
+                }
+            },
+            onCancel: () => {},
+            okText: 'REMOVER' , 
+            cancelText: 'CANCELAR'
+        }
+        toastr.confirm('Deseja realmente remover a história?', toastrConfirmOptions)        
     }
 
     render() {
-        const { back, addAlternativeText, text, edit, isPublic, isModifed } = this.state
+        const { back, addAlternativeText, text, edit, isPublic, isModifed, home } = this.state
         const { history } = this.props.narrativeText
         const { auth } = this.props
 
@@ -86,13 +158,17 @@ class WriteHistory extends Component {
         if (back)
             return <Redirect to='/readhistory'/>
         
+        if (home)
+            return <Redirect to='/' />
+        
         return ( 
             <TemplateHistory handleBack={this.handleBack}
                 handleEditor={this.handleEditor}
                 handleIsPublic={this.handleIsPublic} 
                 history={ {...history, text, isPublic, edit, isModifed, auth} }
                 save={this.save}
-                addAlternativeText={this.addAlternativeText} />
+                addAlternativeText={this.addAlternativeText}
+                deleteHistory={this.deleteHistory} />
          )
     }
 }
@@ -101,6 +177,9 @@ const mapStateToProps = state => ({ auth: state.auth.user, narrativeText: state.
 const mapDispatchToProps = dispatch => bindActionCreators({
     putHistory,
     getHistory,
-    setCreated
+    setCreated,
+    deleteHistory,
+    getMyAlternativeText,
+    dispatch
 }, dispatch)
 export default connect(mapStateToProps, mapDispatchToProps)(WriteHistory)

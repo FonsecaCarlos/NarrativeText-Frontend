@@ -11,12 +11,11 @@ import HeaderLogin from '../../components/headerLogin'
 import './style.css'
 
 class Login extends Component {
-    constructor() {
-        super()
+    constructor(props) {
+        super(props)
         this.state = {
             loginMode: true,
-            forgot: false,
-            reset: false
+            forgot: false
         }
     }
 
@@ -29,19 +28,17 @@ class Login extends Component {
     }
 
     handleReset() {
-        this.setState({ reset: !this.state.reset})
         this.setState({ forgot: !this.state.forgot })
     }
 
     handleForgotReset(v) {
-        const { forgot, reset } = this.state
-        const { resetPassword } = this.props
-
-        if(!reset && forgot) {
+        const { forgot } = this.state
+        const { resetPasswd, forgotPassword, resetPassword } = this.props
+        
+        if(!resetPasswd && forgot) {
             forgotPassword(v)
-            this.setState({ reset: !this.state.reset })
         }
-        if(reset && forgot)
+        if(resetPasswd && forgot)
             resetPassword(v)
     }
 
@@ -51,9 +48,9 @@ class Login extends Component {
     }
 
     render() {
-        const { loginMode, forgot, reset } = this.state
-        const { handleSubmit } = this.props
-
+        const { loginMode, forgot } = this.state
+        const { handleSubmit, resetPasswd } = this.props
+        
         if (forgot)
             return (
                 <div className='login-wrapper'>
@@ -63,12 +60,12 @@ class Login extends Component {
                         </div>
                         <div className='login-form'>
                             <form onSubmit={handleSubmit(v => this.handleForgotReset(v))}>
-                                <p>{ reset ? 'Informe o Token recebido e a Nova Senha' :
+                                <p>{ resetPasswd ? 'Informe o Token recebido e a Nova Senha' :
                                 'Informe o e-mail para receber o Token de alteração' }</p>
 
                                 <Field component={InputCustom} type='email'
                                         name='email' placeholder='E-mail' />
-                                { reset ?
+                                { resetPasswd ?
                                     <div><Field component={InputCustom} type='input'
                                         name='token' placeholder='Token está em sua caixa e e-mail' />
                                     <Field component={InputCustom} type='password'
@@ -81,11 +78,11 @@ class Login extends Component {
                                 }
 
                                 <button type='submit' className='button-form'>
-                                    { reset ? 'Alterar Senha' : 'Solicitar Token'}
+                                    { resetPasswd ? 'Alterar Senha' : 'Solicitar Token'}
                                 </button>
 
                                 <p onClick={() => 
-                                    reset ? this.handleReset() : this.handleForgot()
+                                    resetPasswd ? this.handleReset() : this.handleForgot()
                                 }>Voltar</p>
                             </form>
                         </div>
@@ -130,5 +127,10 @@ class Login extends Component {
 }
 
 Login = reduxForm({ form: 'authForm' })(Login)
-const mapDispatchToProps = dispatch => bindActionCreators({ login, signup, resetPassword }, dispatch)
-export default connect(null, mapDispatchToProps)(Login)
+
+const mapStateToProps = state => ({ resetPasswd: state.auth.reset })
+
+const mapDispatchToProps = dispatch => bindActionCreators({ login, signup, 
+    forgotPassword, resetPassword }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(Login)

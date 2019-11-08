@@ -9,7 +9,6 @@ import HeaderMain from '../../components/headerMain'
 import CardMain from '../../components/cardMain'
 import ButtonCustom from '../../components/buttonCustom'
 
-
 import './style.css'
 
 class MainHistory extends Component {
